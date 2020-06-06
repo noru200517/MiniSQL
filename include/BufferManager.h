@@ -8,6 +8,8 @@
 
 #ifndef BUFFER_MANAGER
 
+#include <unordered_map>
+#include <list>
 #include "BufferDataStructure.h"
 #include "CatalogManager.h"
 
@@ -18,23 +20,38 @@
 
 class BufferManager {
 private:
-    blockQueue myBlockQueue;
-    fileNode* filePool[MAX_FILE_NUM];
-    int fileNum;
     CatalogManager* myCatalogManager;
+    vector <fileNode*> filePool;
+    list <pair<int, blockNode*>> blockPool;
+    std::unordered_map<int, list<pair<int, blockNode*>>::iterator> map;
+    int fileNum;
+    int capacity;
+    int size;
+    
+private:
     char* ReadFile(string fileName, int* size, bool* reachEnd, long offset);
+    bool IsFull();
     bool WriteAllBlocksBack();
-    int WriteLRUBlockBack();
+    blockNode* WriteLRUBlockBack(int& key);
+    int WriteBlockBack(blockNode* node);
     int WriteBlocksBack(blockNode* node);
     void ClearBlockNode(blockNode* node);
+    void InsertFileNode(string fileName, fileNode* prevNode, blockNode* newBlock, int offset, int pos);
     string GenerateFileName(string fileName);
 
 public:
     BufferManager(CatalogManager* catalogManager);
     ~BufferManager();
+    int GetKey(blockNode* node);
+    pair<int, blockNode*> GetBlockInPool(int key);
+    void EraseOldNode(int key);
+    void PutNodeFront(pair<int, blockNode*> kv);
+    void UpdateHashKey(int key);
+
     blockNode* GetBlock(const string fileName);
     blockNode* GetFirstBlock(string fileName);
-    blockNode* GetNextBlock(string fileName, blockNode* blockNode);
+    blockNode* GetNextBlock(blockNode* blocknode);
+    blockNode* GetEmptyBlock();
     fileNode* CreateBlock(string fileName, int fileOffset);
     int FindBlock(string fileName);
     int DropFile(string fileName);
@@ -43,4 +60,4 @@ public:
     void SetDirty(blockNode* myBlockNode);
 };
 
-#endif BUFFER_MANAGER
+#endif //BUFFER_MANAGER

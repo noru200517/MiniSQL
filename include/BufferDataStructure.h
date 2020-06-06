@@ -4,7 +4,7 @@
 using namespace std;
 
 #define MAX_BLOCK_NUM 256    //the maximum number of blocks
-#define BLOCK_SIZE    8192   //the size of a block (8K)
+#define BLOCK_SIZE    4096   //the size of a block (8K)
 #define MAX_FILE_NUM  32
 
 typedef struct block blockNode;
@@ -17,15 +17,27 @@ typedef struct file {
     struct file* prevFileNode;   //pointer to the previous fileNode of the file
     struct file* nextFileNode;   //pointer to the next fileNode of the file
     blockNode* blocknode;        //the block pointed by this fileNode
-    bool fileReachEnd;           //whether the whole file has been written in buffer
+    bool fileReachEnd;           //whether the whole file has been written n buffer
     bool valid;                  //valid or not
+    bool isHead;                 //whether it is the head file node
 
-    file() : fileName(""), prevFileNode(nullptr), nextFileNode(nullptr), blocknode(nullptr), fileReachEnd(false), valid(false) {};
-    file(string filename): fileName(filename), prevFileNode(nullptr), nextFileNode(nullptr), blocknode(nullptr), fileReachEnd(false), valid(false) {};
+    file() : fileName(""), 
+        prevFileNode(nullptr), 
+        nextFileNode(nullptr), 
+        blocknode(nullptr), 
+        fileReachEnd(false), 
+        valid(false),
+        isHead(false) {};
+    file(string filename): 
+        fileName(filename), 
+        prevFileNode(nullptr), 
+        nextFileNode(nullptr), 
+        blocknode(nullptr), 
+        fileReachEnd(false), 
+        valid(true),
+        isHead(false) {};
     ~file() {
-        if (prevFileNode != nullptr) delete prevFileNode;
-        if (nextFileNode != nullptr) delete nextFileNode;
-        if (blocknode != nullptr) delete blocknode;
+        
     }
 }fileNode;
 
@@ -42,8 +54,15 @@ typedef struct fqueue {
         }
     }
     ~fqueue() {
+        fileNode* p, *q;
         for (int i = 0; i < MAX_FILE_NUM; i++) {
-            delete fileQueue[i];
+            p = fileQueue[i];
+            q = p;
+            while (p) {
+                p = p->nextFileNode;
+                delete q;
+                q = p;
+            }
         }
     }
 }fileQueue;
