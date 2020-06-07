@@ -25,16 +25,17 @@ using namespace std;
 
 #define WRONG_FORMAT           -1
 #define TYPE_NOT_EXIST         -2
-#define TABLE_NOT_CREATED      -3 
-#define DROP_TABLE_FAILED      -4
-#define INDEX_NOT_EXIST        -5
-#define TABLE_INFO_NOT_FETCHED -6
-#define WRONG_ATTR_NUM         -7
-#define FILE_NOT_EXIST         -8
-#define NO_EXISTING_COMMAND    -9
-#define INVALID_ATTR_FOR_INDEX -10
-#define INVALID_CHAR_VALUE     -11
-#define INVALID_INT_VALUE      -12
+#define TABLE_ALREADY_CREATED  -3
+#define TABLE_NOT_CREATED      -4 
+#define DROP_TABLE_FAILED      -5
+#define INDEX_NOT_EXIST        -6
+#define TABLE_INFO_NOT_FETCHED -7
+#define WRONG_ATTR_NUM         -8
+#define FILE_NOT_EXIST         -9
+#define NO_EXISTING_COMMAND    -10
+#define INVALID_ATTR_FOR_INDEX -11
+#define INVALID_CHAR_VALUE     -12
+#define INVALID_INT_VALUE      -13
 
 class Interpreter {
 private:

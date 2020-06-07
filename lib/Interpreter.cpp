@@ -489,9 +489,9 @@ int Interpreter::ProcessSelectCommand(string commandString, bool showInfo)
     }
 
     //if there are where clauses, use " = " to replace "=" (and so on)
-    if (whereFlag) {
+    /*if (whereFlag) {
         ProcessOperators(commandString);
-    }
+    }*/
 
     //divide demands into words
     commandStream.str(commandString);
@@ -911,7 +911,7 @@ void Interpreter::ProcessOperators(string& commandString) {
                 commandString.replace(pos, 0, " ");
             }
             pos = commandString.find(op[i]);
-            if (commandString[(size_t)pos + 1] != ' ') {
+            if (commandString[(size_t)pos + sizeof(op[i])] != ' ') {
                 commandString.replace(pos + op[i].size(), 0, " ");
             }
         }
@@ -964,6 +964,14 @@ void Interpreter::EraseExtraSpaces(string& commandString) {
     //去掉头部空格
     while (commandString[0] == ' ') {
         commandString.replace(0, 1, "");
+    }
+    //去掉逗号后面的空格
+    while (1) {
+        pos = commandString.find(", ");
+        if (pos == commandString.npos) {
+            break;
+        }
+        commandString.replace(pos, 2, ",");
     }
 
     //再把括号里面的空格去掉
