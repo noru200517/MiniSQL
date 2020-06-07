@@ -156,14 +156,6 @@ int Interpreter::ProcessCreateTableCommand(string commandString, bool showInfo)
     //variables used to generate a catalog block                
     //initialize the tableInfoNode
 
-    unsigned char** attrInfo = new unsigned char* [5];
-    for (int i = 0; i < 5; i++) {
-        attrInfo[i] = new unsigned char[32];
-        memset(attrInfo[i], 0, 32);
-    }
-    int attributeNum = 0;
-    vector <string> attributeName;
-
     //preprocessing: eliminate the ");"
     int pos = commandString.find(");");
     if (pos == commandString.npos) {
@@ -186,6 +178,23 @@ int Interpreter::ProcessCreateTableCommand(string commandString, bool showInfo)
     while (getline(infoStream, tmp, ' ')) {
         headInfo.push_back(tmp);
     }
+    if (headInfo.size() < 3) {
+        ErrorDealer(WRONG_FORMAT);
+        return STATUS_ERROR;
+    }
+    tableName = headInfo[headInfo.size() - 1];
+    if (myCatalogManager->FindTable(tableName) != TABLE_NOT_FOUND) {
+        ErrorDealer(TABLE_ALREADY_CREATED);
+        return STATUS_ERROR;
+    }
+
+    unsigned char** attrInfo = new unsigned char* [5];
+    for (int i = 0; i < 5; i++) {
+        attrInfo[i] = new unsigned char[32];
+        memset(attrInfo[i], 0, 32);
+    }
+    int attributeNum = 0;
+    vector <string> attributeName;
 
     pos = 0;
     string pkName = "";
@@ -269,7 +278,6 @@ int Interpreter::ProcessCreateTableCommand(string commandString, bool showInfo)
 
     //create tables and catalogs
     //get table name and call API module
-    tableName = headInfo[headInfo.size() - 1];
     string* attrName = new string[attributeNum];
     for (int i = 0; i < attributeNum; i++) {
         attrName[i] = attributeName[i];
@@ -1008,6 +1016,9 @@ void Interpreter::ErrorDealer(int errorCode) {
         break;
     case TABLE_NOT_CREATED:
         cerr << "Error: table is not created" << endl;
+        break;
+    case TABLE_ALREADY_CREATED:
+        cerr << "Error: table has been created" << endl;
         break;
     case DROP_TABLE_FAILED:
         cerr << "Error: drop table failed" << endl;
