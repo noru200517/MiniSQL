@@ -36,9 +36,12 @@ void Interpreter::InterpretCommand()
                 break;
             }
             else {
+                commandString += " ";
                 cout << "       >>";
             }
         }
+
+        EraseExtraSpaces(commandString);
         //test* see the input command string
         //cout << "Command string is: " << commandString << endl;
         if (commandString.compare("quit;") == 0) {
@@ -152,7 +155,7 @@ int Interpreter::ProcessCreateTableCommand(string commandString, bool showInfo)
 
     //variables used to generate a catalog block                
     //initialize the tableInfoNode
-    
+
     unsigned char** attrInfo = new unsigned char* [5];
     for (int i = 0; i < 5; i++) {
         attrInfo[i] = new unsigned char[32];
@@ -243,7 +246,6 @@ int Interpreter::ProcessCreateTableCommand(string commandString, bool showInfo)
             //get attribute's type
             int type = GetTypeCode(tmp);
             if (type < 0) {   //error
-                ErrorDealer(TYPE_NOT_EXIST);
                 return STATUS_ERROR;
             }
             else {            //update recordUnique, recordSize and recordFormat
@@ -281,7 +283,7 @@ int Interpreter::ProcessCreateTableCommand(string commandString, bool showInfo)
     
     for (int i = 0; i < attributeNum; i++) {
         if (tableInfo->attrInfo[PK][i]) {
-            myAPI->CreateIndex(pkName, tableName, attrName[i]);
+            myAPI->CreateIndex(pkName, tableName, attrName[i], false);
         }
     }
 
@@ -389,6 +391,11 @@ int Interpreter::ProcessCreateIndexCommand(string commandString, bool showInfo)
         return STATUS_ERROR;
     }
     string attrName = contentInfo[0];
+    
+    if (!myCatalogManager->IsUnique(tableName, attrName)) {
+        ErrorDealer(INVALID_ATTR_FOR_INDEX);
+        return STATUS_ERROR;
+    }
 
     myAPI->CreateIndex(indexName, tableName, attrName);
 
@@ -484,8 +491,18 @@ int Interpreter::ProcessSelectCommand(string commandString, bool showInfo)
         RemoveSpaces(tmp);
         headInfo.push_back(tmp);
     }
+    //length check
+    if (headInfo.size() < 4) {
+        ErrorDealer(WRONG_FORMAT);
+        return STATUS_ERROR;
+    }
     //if it is not a "select *", report error
     if (headInfo[1].compare("*") != 0) {
+        ErrorDealer(WRONG_FORMAT);
+        return STATUS_ERROR;
+    }
+    //if it is not a "from", report error
+    if (headInfo[2].compare("from") != 0) {
         ErrorDealer(WRONG_FORMAT);
         return STATUS_ERROR;
     }
@@ -592,6 +609,14 @@ int Interpreter::ProcessInsertCommand(string commandString, bool showInfo)
         ErrorDealer(WRONG_FORMAT);
         return STATUS_ERROR;
     }
+    if (headInfo[1].compare("into") != 0) {
+        ErrorDealer(WRONG_FORMAT);
+        return STATUS_ERROR;
+    }
+    if (headInfo[3].compare("values") != 0) {
+        ErrorDealer(WRONG_FORMAT);
+        return STATUS_ERROR;
+    }
     tableName = headInfo[headInfo.size() - 2];
 
     //check whether the table has been created(else we can't do insertion)
@@ -643,6 +668,10 @@ int Interpreter::ProcessInsertCommand(string commandString, bool showInfo)
             if (contentInfo[i][0] == '"' && contentInfo[i][contentInfo[i].size()-1] == '"'
                 || contentInfo[i][0] == '\'' && contentInfo[i][contentInfo[i].size()-1] == '\'') {
                 attrVal[i] = contentInfo[i].substr(1, contentInfo[i].size() - 2);
+                if (attrVal[i].size() > charSize) {
+                    ErrorDealer(INVALID_CHAR_VALUE);
+                    return STATUS_ERROR;
+                }
             }
             else {
                 ErrorDealer(WRONG_FORMAT);
@@ -830,6 +859,10 @@ int Interpreter::GetTypeCode(string type)
         return FLOAT;
     }
     else{
+        if (type.find('(') == type.npos || type.find(')') == type.npos || type.find("()") != type.npos) {
+            ErrorDealer(WRONG_FORMAT);
+            return -1;
+        }
         string tmp = type.substr(0, 4);
         int charSize = 0;
         if (tmp.compare("char") == 0) {     //char type
@@ -841,9 +874,13 @@ int Interpreter::GetTypeCode(string type)
                 if (charSize == 0)return -1;
                 else return (3 + charSize);
             }
-            else return -1;       //else there must be a syntax error
+            else {
+                ErrorDealer(WRONG_FORMAT);
+                return -1;       //else there must be a syntax error
+            }
         }
         else {
+            ErrorDealer(TYPE_NOT_EXIST);
             return -1;
         }
     }
@@ -855,17 +892,7 @@ void Interpreter::ProcessOperators(string& commandString) {
     string* op = new string[6]{ "=", "<>", "<", ">", "<=", ">=" };
     //先消除重复空格
     bool space = false;
-    for (int i = 0; i < commandString.size(); i++) {
-        if (space == false && commandString[i] == ' ') {
-            space = true;
-        }
-        else if (space == true && commandString[i] == ' ') {
-            commandString.replace(i, 1, "");
-        }
-        else {
-            space = false;
-        }
-    }
+    EraseExtraSpaces(commandString);
 
     //再进行运算符两边的空格生成
     int pos = 0;
@@ -882,6 +909,70 @@ void Interpreter::ProcessOperators(string& commandString) {
         }
     }
     delete[] op;
+}
+
+//用来deal with所有的奇怪输入
+void Interpreter::EraseExtraSpaces(string& commandString) {
+    //先把\t找出来然后去掉
+    int pos = 0, pos2 = 0;
+    while (1) {
+        pos = commandString.find('\t');
+        if (pos == commandString.npos) {
+            break;
+        }
+        commandString.replace(pos, 1, " ");
+    }
+
+    //再把\n找出来去掉
+    while (1) {
+        pos = commandString.find('\n');
+        if (pos == commandString.npos) {
+            break;
+        }
+        commandString.replace(pos, 1, " ");
+    }
+
+    //如果有*，两边加上空格
+    pos = commandString.find('*');
+    if (pos != commandString.npos) {
+        commandString.replace(pos, 1, " * ");
+    }
+
+    //再把重复空格去掉
+    bool space = false;
+    for (int i = 0; i < commandString.size(); i++) {
+        if (space == false && commandString[i] == ' ') {
+            space = true;
+        }
+        else if (space == true && commandString[i] == ' ') {
+            commandString.replace(i, 1, "");
+            i--;
+        }
+        else {
+            space = false;
+        }
+    }
+
+    //去掉头部空格
+    while (commandString[0] == ' ') {
+        commandString.replace(0, 1, "");
+    }
+
+    //再把括号里面的空格去掉
+    while (1) {
+        pos = commandString.find("( ");
+        pos2 = commandString.find(" )");
+        if (pos == commandString.npos && pos2 == commandString.npos) {
+            break;
+        }
+        if (pos != commandString.npos) {
+            commandString.replace(pos, 2, "(");
+        }
+        pos2 = commandString.find(" )");
+        if (pos2 != commandString.npos) {
+            commandString.replace(pos2, 2, ")");
+        }
+    }
 }
 
 bool Interpreter::IsDigit(string tmp)
@@ -935,6 +1026,10 @@ void Interpreter::ErrorDealer(int errorCode) {
         break;
     case NO_EXISTING_COMMAND:
         cerr << "Syntax error: no existing command" << endl;
+    case INVALID_ATTR_FOR_INDEX:
+        cerr << "Error: invalid attribute for index: the attribute is not unique" << endl;
+    case INVALID_CHAR_VALUE:
+        cerr << "Error: invalid value: char length exceeds the length in table definition" << endl;
     }
     cout << endl;
 }

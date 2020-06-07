@@ -23,15 +23,18 @@ using namespace std;
 #define DELETE          0x17
 #define EXEC_FILE       0x18
 
-#define WRONG_FORMAT       -1
-#define TYPE_NOT_EXIST   -2
+#define WRONG_FORMAT           -1
+#define TYPE_NOT_EXIST         -2
 #define TABLE_NOT_CREATED      -3 
-#define DROP_TABLE_FAILED -4
-#define INDEX_NOT_EXIST   -5
+#define DROP_TABLE_FAILED      -4
+#define INDEX_NOT_EXIST        -5
 #define TABLE_INFO_NOT_FETCHED -6
-#define WRONG_ATTR_NUM     -7
-#define FILE_NOT_EXIST     -8
-#define NO_EXISTING_COMMAND -9
+#define WRONG_ATTR_NUM         -7
+#define FILE_NOT_EXIST         -8
+#define NO_EXISTING_COMMAND    -9
+#define INVALID_ATTR_FOR_INDEX -10
+#define INVALID_CHAR_VALUE     -11
+#define INVALID_INT_VALUE      -12
 
 class Interpreter {
 private:
@@ -51,6 +54,7 @@ private:
     void ErrorDealer(int errorCode);
     bool IsDigit(string tmp);
     void RemoveSpaces(string& str);
+    void EraseExtraSpaces(string& commandString);
     void ProcessOperators(string& commandString);
     string GeneratePKName(string attrName);
 
